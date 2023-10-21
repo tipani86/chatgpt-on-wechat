@@ -15,6 +15,7 @@ from bridge.reply import Reply, ReplyType
 from common.log import logger
 from common.token_bucket import TokenBucket
 from config import conf, load_config
+from bot.chatgpt.functions import *
 
 
 # OpenAI对话模型API (可用)
@@ -120,7 +121,18 @@ class ChatGPTBot(Bot, OpenAIImage):
             # if api_key == None, the default openai.api_key will be used
             if args is None:
                 args = self.args
-            response = openai.ChatCompletion.create(api_key=api_key, messages=session.messages, **args)
+            response = openai.ChatCompletion.create(api_key=api_key, messages=session.messages, functions=get_functions_prompt(), **args)
+            if response["choices"][0]["message"].get("function_call"):
+                function_name = response["choices"][0]["message"]["function_call"]["name"]
+                function_to_call = available_functions.get(function_name)
+                if function_to_call:
+                    function_args = response["choices"][0]["message"]["function_call"]["arguments"]
+                    function_response = function_to_call(**json.loads(function_args))
+                    logger.info("[CHATGPT] function_name={}, function_args={}".format(function_name, function_args)) 
+                    logger.debug("[CHATGPT] function_response={}".format(function_response))
+                    messages = session.messages 
+                    messages.extend([{"role": "assistant", "content": "", "function_call": {"name": function_name, "arguments": function_args}}, {"role": "function", "name": function_name, "content": function_response}])
+                    response = openai.ChatCompletion.create(api_key=api_key, messages=messages, **args)
             # logger.debug("[CHATGPT] response={}".format(response))
             # logger.info("[ChatGPT] reply={}, total_tokens={}".format(response.choices[0]['message']['content'], response["usage"]["total_tokens"]))
             return {

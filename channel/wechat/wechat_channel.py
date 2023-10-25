@@ -23,6 +23,7 @@ from common.time_check import time_checker
 from config import conf, get_appdata_dir
 from lib import itchat
 from lib.itchat.content import *
+from lib.itchat.storage import *
 
 
 @itchat.msg_register([TEXT, VOICE, PICTURE, NOTE, ATTACHMENT, SHARING])
@@ -234,3 +235,10 @@ class WechatChannel(ChatChannel):
             video_storage.seek(0)
             itchat.send_video(video_storage, toUserName=receiver)
             logger.info("[WX] sendVideo url={}, receiver={}".format(video_url, receiver))
+        elif reply.type == ReplyType.InviteRoom: # Invite user to a chatroom
+            user_id = reply.content["user_id"]
+            group_name = reply.content["group_name"]
+            chatroom = itchat.search_chatrooms(name=group_name)
+            chatroom_id = chatroom[0]["UserName"]
+            itchat.add_member_into_chatroom(chatroom_id, user_id)
+            logger.info("[WX] invite user {} to chatroom {}".format(user_id, group_name))

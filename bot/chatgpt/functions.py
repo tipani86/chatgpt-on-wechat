@@ -59,11 +59,12 @@ def search_podcasts(query: str):
     return json.dumps(data[:3]).encode('utf-8').decode('unicode_escape')
     
 def get_functions_prompt():
-    dt = datetime.datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
+    # Get the current time in Beijing (UTC+8) and string format it as YYYY-MM-DD HH:MM:SS
+    dt = datetime.datetime.now(timezone(datetime.timedelta(hours=8))).strftime('%Y-%m-%d %H:%M:%S')
     return [
         {
             'name': 'search_bing',
-            'description': f'Search Bing for web results on factual or topical questions. It is {dt} UTC now.',
+            'description': f'Search Bing for web results on factual or topical questions. It is {dt} in Beijing now.',
             'parameters': {
                 'type': 'object',
                 'properties': {

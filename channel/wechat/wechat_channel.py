@@ -24,7 +24,18 @@ from config import conf, get_appdata_dir
 from lib import itchat
 from lib.itchat.content import *
 from lib.itchat.storage import *
+from tqdm import tqdm
 
+WCPM = 500 # (Chinese) characters per minute (write)
+RCPM = 1000 # (Chinese) characters per minute (read)
+def wait_for(desc: str, wait_time: float):
+    # Input: desc: description of the waiting process
+    #        time: waiting time in seconds
+
+    # Convert waiting time 0.01s increments and as int
+    wait_time = int(wait_time * 100)
+    for _ in tqdm(range(wait_time), desc=desc, leave=False):
+        time.sleep(0.01 * 0.85)
 
 @itchat.msg_register([TEXT, VOICE, PICTURE, NOTE, ATTACHMENT, SHARING])
 def handler_single_msg(msg):
@@ -156,6 +167,7 @@ class WechatChannel(ChatChannel):
             logger.debug("[WX]receive patpat msg: {}".format(cmsg.content))
         elif cmsg.ctype == ContextType.TEXT:
             logger.debug("[WX]receive text msg: {}, cmsg={}".format(json.dumps(cmsg._rawmsg, ensure_ascii=False), cmsg))
+            wait_for("Simulating reading the message...", len(cmsg.content.replace(" ", "")) / RCPM * 60)
         else:
             logger.debug("[WX]receive msg: {}, cmsg={}".format(cmsg.content, cmsg))
         context = self._compose_context(cmsg.ctype, cmsg.content, isgroup=False, msg=cmsg)
@@ -175,6 +187,7 @@ class WechatChannel(ChatChannel):
             logger.debug("[WX]receive note msg: {}".format(cmsg.content))
         elif cmsg.ctype == ContextType.TEXT:
             # logger.debug("[WX]receive group msg: {}, cmsg={}".format(json.dumps(cmsg._rawmsg, ensure_ascii=False), cmsg))
+            wait_for("Simulating reading the message...", len(cmsg.content.replace(" ", "")) / RCPM * 60)
             pass
         elif cmsg.ctype == ContextType.FILE:
             logger.debug(f"[WX]receive attachment msg, file_name={cmsg.content}")
@@ -188,9 +201,11 @@ class WechatChannel(ChatChannel):
     def send(self, reply: Reply, context: Context):
         receiver = context["receiver"]
         if reply.type == ReplyType.TEXT:
+            wait_for("Simulating typing the response...", len(reply.content.replace(" ", "")) / WCPM * 60)
             itchat.send(reply.content, toUserName=receiver)
             logger.info("[WX] sendMsg={}, receiver={}".format(reply, receiver))
         elif reply.type == ReplyType.ERROR or reply.type == ReplyType.INFO:
+            wait_for("Simulating typing the response...", len(reply.content.replace(" ", "")) / WCPM * 60)
             itchat.send(reply.content, toUserName=receiver)
             logger.info("[WX] sendMsg={}, receiver={}".format(reply, receiver))
         elif reply.type == ReplyType.VOICE:
@@ -236,9 +251,9 @@ class WechatChannel(ChatChannel):
             itchat.send_video(video_storage, toUserName=receiver)
             logger.info("[WX] sendVideo url={}, receiver={}".format(video_url, receiver))
         elif reply.type == ReplyType.InviteRoom: # Invite user to a chatroom
-            user_id = reply.content["user_id"]
             group_name = reply.content["group_name"]
             chatroom = itchat.search_chatrooms(name=group_name)
             chatroom_id = chatroom[0]["UserName"]
-            itchat.add_member_into_chatroom(chatroom_id, user_id)
-            logger.info("[WX] invite user {} to chatroom {}".format(user_id, group_name))
+            wait_for("Simulating manually inviting user to the group...", 10)
+            itchat.add_member_into_chatroom(chatroom_id, receiver)
+            logger.info("[WX] invite user {} to chatroom {}".format(receiver, group_name))

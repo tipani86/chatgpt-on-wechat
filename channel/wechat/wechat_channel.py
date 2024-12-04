@@ -253,6 +253,7 @@ class WechatChannel(ChatChannel):
         elif reply.type == ReplyType.InviteRoom: # Invite user to a chatroom
             group_name = reply.content["group_name"]
             chatroom = itchat.search_chatrooms(name=group_name)
+            logger.debug(f"[WX] invite user to chatroom, chatroom={chatroom} (group name: {group_name})")
             chatroom_id = chatroom[0]["UserName"]
             wait_for("Simulating manually inviting user to the group...", 10)
             itchat.add_member_into_chatroom(chatroom_id, receiver, useInvitation=True)

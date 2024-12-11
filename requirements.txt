@@ -11,3 +11,4 @@ bs4
 jieba
 feedparser
 thefuzz
+pypng
